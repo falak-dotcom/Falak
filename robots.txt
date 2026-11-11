@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://falak-dotcom.github.io/Falak/sitemap.xml
