@@ -191,7 +191,7 @@ fieldset.pay legend { font-weight: 700; font-size: 0.95rem; padding: 0; margin-b
   .card { transition: transform .15s ease; }
   .card:hover { transform: translateY(-3px); }
 }
-html{color-scheme:light dark}body{margin:0}</style>
+html{color-scheme:light dark}body{margin:0}[hidden]{display:none!important}</style>
 </head>
 <body>
 <header class="top">
@@ -278,7 +278,7 @@ var PAY = {
 };
 
 /* Google Sheet ka CSV link. Khali rahe to namoona products dikhte hain. */
-var SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRionA5-l-QiwksHa2lbAvus9806A9dsFiFWHm-YVZVkdjmGI5L5z4GRhNsogKo8HRM_YkjPKv1NgO2/pub?gid=1576526487&single=true&output=csv";
+var SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRionA5-l-QiwksHa2lbAvus9806A9dsFiFWHm-YVZVkdjmGI5L5z4GRhNsogKo8HRM_YkjPKv1NgO2/pub?gid=1227708524&single=true&output=csv";
 
 var CAT_UR = {
   "lawn": "لان", "kurta": "کُرتا", "shawl": "شال", "footwear": "جوتے", "bags": "بیگز",
@@ -455,15 +455,18 @@ function productsFromCSV(text) {
 function loadProducts() {
   if (!SHEET_CSV_URL) return;
   fetch(SHEET_CSV_URL).then(function (r) {
-    if (!r.ok) throw new Error("bad status");
+    if (!r.ok) throw new Error("HTTP " + r.status);
     return r.text();
   }).then(function (txt) {
-    P = productsFromCSV(txt);
-    state.status = "ok";
+    var list = productsFromCSV(txt);
+    if (!list.length) throw new Error("no products found in sheet");
+    P = list; state.status = "ok";
     if (state.cat !== "All" && categories().indexOf(state.cat) === -1) state.cat = "All";
+  }).catch(function (e) {
+    state.status = "fail"; state.err = String((e && e.message) || e);
+    try { console.error("Products load error:", e); } catch (x) {}
+  }).then(function () {
     renderChips(); renderGrid(); route();
-  }).catch(function () {
-    state.status = "fail"; renderChips(); renderGrid(); route();
   });
 }
 
@@ -494,7 +497,7 @@ function renderChips() {
 function renderGrid() {
   var g = $("grid"); g.innerHTML = "";
   if (state.status !== "ok") {
-    g.appendChild(el("p", "status", state.status === "loading" ? t("loading") : t("loadFail"))); return;
+    g.appendChild(el("p", "status", state.status === "loading" ? t("loading") : t("loadFail") + (state.err ? " [" + state.err + "]" : ""))); return;
   }
   var list = P.filter(function (p) { return state.cat === "All" || p.cat === state.cat; });
   if (!list.length) { g.appendChild(el("p", "status", t("noProducts"))); return; }
@@ -603,7 +606,7 @@ function route() {
   if (state.status !== "ok") {
     var box = $("detail"); box.innerHTML = "";
     var b = el("a", "back", (state.lang === "ur" ? "→ " : "← ") + t("back")); b.href = "#"; box.appendChild(b);
-    box.appendChild(el("p", "status", state.status === "loading" ? t("loading") : t("loadFail")));
+    box.appendChild(el("p", "status", state.status === "loading" ? t("loading") : t("loadFail") + (state.err ? " [" + state.err + "]" : "")));
     return;
   }
   var p = findP(parseInt(m[1], 10));
